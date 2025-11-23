@@ -89,7 +89,12 @@ public class RegisterActivity extends AppCompatActivity {
                     btnRegister.setEnabled(true);
                     try {
                         String errorBody = response.errorBody().string();
-                        Toast.makeText(RegisterActivity.this, "Error: " + errorBody, Toast.LENGTH_LONG).show();
+                        RegistroResponse errorResponse = new com.google.gson.Gson().fromJson(errorBody, RegistroResponse.class);
+                        if (errorResponse != null && errorResponse.getMensaje() != null) {
+                            Toast.makeText(RegisterActivity.this, errorResponse.getMensaje(), Toast.LENGTH_LONG).show();
+                        } else {
+                            Toast.makeText(RegisterActivity.this, "Error en la validación", Toast.LENGTH_SHORT).show();
+                        }
                     } catch (Exception e) {
                         Toast.makeText(RegisterActivity.this, "Error en la validación", Toast.LENGTH_SHORT).show();
                     }
