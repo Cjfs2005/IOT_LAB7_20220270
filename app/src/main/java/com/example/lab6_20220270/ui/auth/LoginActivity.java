@@ -3,86 +3,113 @@ package com.example.lab6_20220270.ui.auth;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
-import androidx.activity.result.ActivityResultLauncher;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.lab6_20220270.MainActivity;
 import com.example.lab6_20220270.R;
-import com.firebase.ui.auth.AuthUI;
-import com.firebase.ui.auth.FirebaseAuthUIActivityResultContract;
-import com.firebase.ui.auth.data.model.FirebaseAuthUIAuthenticationResult;
-import com.google.firebase.auth.FirebaseAuth;
+import com.example.lab6_20220270.service.AuthService;
+import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseUser;
-import java.util.Arrays;
-import java.util.List;
 
 public class LoginActivity extends AppCompatActivity {
 
-    private FirebaseAuth auth;
-    private ActivityResultLauncher<Intent> signInLauncher;
+    private TextInputEditText etEmail, etPassword;
+    private Button btnLogin;
+    private TextView tvRegister, tvForgotPassword;
+    private ProgressBar progressBar;
+    private AuthService authService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
-        auth = FirebaseAuth.getInstance();
-        signInLauncher = registerForActivityResult(
-                new FirebaseAuthUIActivityResultContract(),
-                this::onSignInResult
-        );
-        Button btnEmailPassword = findViewById(R.id.btnEmailPassword);
-        Button btnGoogle = findViewById(R.id.btnGoogle);
-        btnEmailPassword.setOnClickListener(v -> startEmailPasswordSignIn());
-        btnGoogle.setOnClickListener(v -> startGoogleSignIn());
+
+        etEmail = findViewById(R.id.etLoginEmail);
+        etPassword = findViewById(R.id.etLoginPassword);
+        btnLogin = findViewById(R.id.btnLogin);
+        tvRegister = findViewById(R.id.tvGoToRegister);
+        tvForgotPassword = findViewById(R.id.tvForgotPassword);
+        progressBar = findViewById(R.id.progressBarLogin);
+
+        authService = AuthService.getInstance();
+
+        btnLogin.setOnClickListener(v -> loginUser());
+        tvRegister.setOnClickListener(v -> {
+            startActivity(new Intent(LoginActivity.this, RegisterActivity.class));
+        });
+        tvForgotPassword.setOnClickListener(v -> showForgotPasswordDialog());
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        FirebaseUser currentUser = auth.getCurrentUser();
-        if(currentUser != null){
+        FirebaseUser currentUser = authService.getCurrentUser();
+        if (currentUser != null) {
             navigateToMain();
         }
     }
 
-    private void startEmailPasswordSignIn() {
-        List<AuthUI.IdpConfig> providers = Arrays.asList(
-                new AuthUI.IdpConfig.EmailBuilder().build()
-        );
-        Intent signInIntent = AuthUI.getInstance()
-                .createSignInIntentBuilder()
-                .setAvailableProviders(providers)
-                .setLogo(R.drawable.ic_app_logo)
-                .setTheme(R.style.Theme_LAB6_20220270)
-                .build();
-        signInLauncher.launch(signInIntent);
-    }
+    private void loginUser() {
+        String email = etEmail.getText().toString().trim();
+        String password = etPassword.getText().toString().trim();
 
-    private void startGoogleSignIn() {
-        List<AuthUI.IdpConfig> providers = Arrays.asList(
-                new AuthUI.IdpConfig.GoogleBuilder().build()
-        );
-        Intent signInIntent = AuthUI.getInstance()
-                .createSignInIntentBuilder()
-                .setAvailableProviders(providers)
-                .setLogo(R.drawable.ic_app_logo)
-                .setTheme(R.style.Theme_LAB6_20220270)
-                .build();
-        signInLauncher.launch(signInIntent);
-    }
-
-    private void onSignInResult(FirebaseAuthUIAuthenticationResult result) {
-        if (result.getResultCode() == RESULT_OK) {
-            navigateToMain();
-        } else {
-            Toast.makeText(this, "Error al iniciar sesión", Toast.LENGTH_SHORT).show();
+        if (email.isEmpty() || password.isEmpty()) {
+            Toast.makeText(this, "Complete todos los campos", Toast.LENGTH_SHORT).show();
+            return;
         }
+
+        progressBar.setVisibility(ProgressBar.VISIBLE);
+        btnLogin.setEnabled(false);
+
+        authService.loginWithEmail(email, password, task -> {
+            progressBar.setVisibility(ProgressBar.GONE);
+            btnLogin.setEnabled(true);
+            if (task.isSuccessful()) {
+                navigateToMain();
+            } else {
+                Toast.makeText(LoginActivity.this, "Error: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
-    private void navigateToMain(){
+    private void showForgotPasswordDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Recuperar Contraseña");
+        
+        final TextInputEditText input = new TextInputEditText(this);
+        input.setHint("Correo electrónico");
+        builder.setView(input);
+
+        builder.setPositiveButton("Enviar", (dialog, which) -> {
+            String email = input.getText().toString().trim();
+            if (email.isEmpty()) {
+                Toast.makeText(LoginActivity.this, "Ingrese un correo", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            sendPasswordResetEmail(email);
+        });
+        builder.setNegativeButton("Cancelar", (dialog, which) -> dialog.cancel());
+        builder.show();
+    }
+
+    private void sendPasswordResetEmail(String email) {
+        progressBar.setVisibility(ProgressBar.VISIBLE);
+        authService.sendPasswordResetEmail(email, task -> {
+            progressBar.setVisibility(ProgressBar.GONE);
+            if (task.isSuccessful()) {
+                Toast.makeText(LoginActivity.this, "Correo de recuperación enviado", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(LoginActivity.this, "Error: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void navigateToMain() {
         Intent i = new Intent(this, MainActivity.class);
         startActivity(i);
         finish();
     }
-
 }

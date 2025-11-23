@@ -3,7 +3,7 @@
     <item
         android:id="@+id/nav_vehicles"
         android:icon="@android:drawable/ic_menu_view"
-        android:title="Mis Vehículos" />
+        android:title="Vehículos" />
     <item
         android:id="@+id/nav_records"
         android:icon="@android:drawable/ic_menu_edit"
@@ -13,7 +13,11 @@
         android:icon="@android:drawable/ic_menu_info_details"
         android:title="Resumen" />
     <item
+        android:id="@+id/nav_profile"
+        android:icon="@android:drawable/ic_menu_myplaces"
+        android:title="Perfil" />
+    <item
         android:id="@+id/nav_logout"
         android:icon="@android:drawable/ic_lock_power_off"
-        android:title="Cerrar Sesión" />
+        android:title="Salir" />
 </menu>
